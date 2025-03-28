@@ -1,9 +1,10 @@
-import { Button } from "@/components/ui/button";
+import Layout from "./layout"
+import DialogUseDemo from "./dialog-use-demo"
 
 export default function Page() {
   return (
-    <div className="w-1vw h-lvh flex justify-center items-center">
-      <Button>Button</Button>
-    </div>
-  );
+    <Layout>
+      <DialogUseDemo></DialogUseDemo>
+    </Layout>
+  )
 }
