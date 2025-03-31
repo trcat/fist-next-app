@@ -1,119 +1,18 @@
 "use client"
 
+import { DialogProps } from "@radix-ui/react-dialog"
 import React from "react"
-import { createRoot } from "react-dom/client"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog"
+import { createRoot, Root } from "react-dom/client"
+import DialogDemo from "./dialog-demo"
 
-interface DialogOptions {
-  title?: string
-  content: string | HTMLElement
-  onClose?: () => void
-  onConfirm?: () => void
-  confirmText?: string
-  cancelText?: string
+interface DialogOptions extends DialogProps {
+  zIndex?: number
 }
-
-// React 组件
-function DialogComponent({
-  options,
-  onClose,
-}: {
-  options: DialogOptions
-  onClose: () => void
-}) {
-  return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{options.title || "提示"}</DialogTitle>
-          <DialogDescription>
-            {typeof options.content === "string" ? options.content : ""}
-          </DialogDescription>
-        </DialogHeader>
-        {typeof options.content !== "string" && (
-          <div
-            ref={(el) => {
-              if (el && options.content instanceof HTMLElement) {
-                el.appendChild(options.content)
-              }
-            }}
-          />
-        )}
-        <DialogFooter>
-          {options.onConfirm && (
-            <button
-              onClick={() => {
-                options.onConfirm?.()
-                onClose()
-              }}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              {options.confirmText || "确认"}
-            </button>
-          )}
-          <DialogClose asChild>
-            <button
-              onClick={() => {
-                options.onClose?.()
-                onClose()
-              }}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-            >
-              {options.cancelText || "取消"}
-            </button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// Web Component 包装器
-class DialogElement extends HTMLElement {
-  private root: ReturnType<typeof createRoot> | null = null
-  private options: DialogOptions | null = null
-
-  connectedCallback() {
-    this.root = createRoot(this)
-  }
-
-  disconnectedCallback() {
-    this.root?.unmount()
-    this.root = null
-  }
-
-  setOptions(options: DialogOptions) {
-    this.options = options
-    this.render()
-  }
-
-  private render() {
-    if (!this.root || !this.options) return
-
-    this.root.render(
-      <DialogComponent
-        options={this.options}
-        onClose={() => {
-          this.remove()
-        }}
-      />
-    )
-  }
-}
-
-customElements.define("react-dialog", DialogElement)
 
 class DialogManager {
   private static instance: DialogManager
   private dialogs: Map<string, HTMLElement> = new Map()
+  private dialogRoots: Map<string, Root> = new Map()
   private zIndex: number = 1000
 
   private constructor() {}
@@ -125,27 +24,54 @@ class DialogManager {
     return DialogManager.instance
   }
 
-  openDialog(options: DialogOptions): string {
-    const dialogElement = document.createElement("react-dialog")
-    const id = Math.random().toString(36).substring(2, 9)
-    dialogElement.id = id
-    dialogElement.style.cssText = `
+  openDialog(options?: DialogOptions): string {
+    if (options) {
+      this.zIndex = options.zIndex || this.zIndex
+    }
+    this.zIndex++
+
+    const wrap = document.createElement("div")
+    wrap.className = "dialog-wrap"
+    wrap.style.cssText = `
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: ${this.zIndex++};
+      z-index: ${this.zIndex};
     `
+    const root = createRoot(wrap)
+    const id = Math.random().toString(36).substring(2, 9)
+    root.render(
+      <DialogDemo
+        {...options}
+        id={id}
+        open={true}
+        onOpenChange={(val) => {
+          options?.onOpenChange?.(val)
+          if (!val) {
+            this.closeDialog(id)
+          }
+        }}
+      />
+    )
+    document.body.appendChild(wrap)
 
-    document.body.appendChild(dialogElement)
-    ;(dialogElement as DialogElement).setOptions(options)
-    this.dialogs.set(id, dialogElement)
+    this.dialogs.set(id, wrap)
+    this.dialogRoots.set(id, root)
+
     return id
   }
 
   closeDialog(id: string): void {
     const dialog = this.dialogs.get(id)
+    const root = this.dialogRoots.get(id)
+
+    if (root) {
+      root.unmount()
+      this.dialogRoots.delete(id)
+    }
+
     if (dialog) {
       dialog.remove()
       this.dialogs.delete(id)
@@ -153,6 +79,9 @@ class DialogManager {
   }
 
   closeAllDialogs(): void {
+    this.dialogRoots.forEach((root) => root.unmount())
+    this.dialogRoots.clear()
+
     this.dialogs.forEach((dialog) => dialog.remove())
     this.dialogs.clear()
   }
