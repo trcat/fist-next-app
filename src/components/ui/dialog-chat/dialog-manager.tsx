@@ -3,7 +3,7 @@
 import { DialogProps } from "@radix-ui/react-dialog"
 import React from "react"
 import { createRoot, Root } from "react-dom/client"
-import DialogDemo from "./dialog-demo"
+import DialogDemo from "./dialog-chat"
 
 interface DialogOptions extends DialogProps {
   zIndex?: number
@@ -68,13 +68,14 @@ class DialogManager {
     const root = this.dialogRoots.get(id)
 
     if (root) {
-      root.unmount()
-      this.dialogRoots.delete(id)
+      console.log(root)
+      // root.unmount()
+      // this.dialogRoots.delete(id)
     }
 
     if (dialog) {
-      dialog.remove()
-      this.dialogs.delete(id)
+      // dialog.remove()
+      // this.dialogs.delete(id)
     }
   }
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { dialogManager } from "./dialog-manager"
+import { dialogManager } from "@/components/ui/dialog-chat/dialog-manager"
 
 export default function DialogUseDemo() {
   function handleClick() {
